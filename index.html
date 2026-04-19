@@ -77,57 +77,54 @@
 
     <div class="p-6 md:p-8 flex flex-col gap-8">
       
-      <!-- Top Section: Settings, Timer, and Seat Buttons -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Top Section -->
+      <div class="flex flex-col gap-6">
         
-        <!-- Left Side: Settings and Timer -->
-        <div class="flex flex-col gap-6">
-          <!-- Settings -->
-          <div class="bg-white p-6 rounded-lg border border-steel shadow-sm">
-            <label class="block text-lg font-bold mb-2 text-navy">
-              設定班級人數：
-            </label>
-            <input
-              type="number"
-              id="student-count-input"
-              min="1"
-              max="100"
-              class="w-full text-xl p-2 border-2 border-navy rounded-md focus:outline-none focus:ring-2 focus:ring-teal bg-alice disabled:opacity-50 transition-opacity"
-            />
+        <!-- Settings (Top Left) -->
+        <div class="bg-white p-6 rounded-lg border border-steel shadow-sm w-full md:w-1/3 self-start">
+          <label class="block text-lg font-bold mb-2 text-navy">
+            設定班級人數：
+          </label>
+          <input
+            type="number"
+            id="student-count-input"
+            min="1"
+            max="100"
+            class="w-full text-xl p-2 border-2 border-navy rounded-md focus:outline-none focus:ring-2 focus:ring-teal bg-alice disabled:opacity-50 transition-opacity"
+          />
+        </div>
+
+        <!-- Timer Display -->
+        <div class="bg-white border-2 border-navy p-6 flex flex-col items-center justify-center rounded-lg shadow-sm relative overflow-hidden">
+          <div class="absolute top-0 w-full h-2 bg-navy"></div>
+          
+          <div class="text-6xl font-mono font-black text-navy tracking-wider my-2 drop-shadow-sm flex items-center gap-3">
+            <i data-lucide="timer" class="text-teal w-10 h-10"></i>
+            <span id="timer-display">00:00</span>
           </div>
 
-          <!-- Timer Display -->
-          <div class="bg-white border-2 border-navy p-6 flex flex-col items-center justify-center rounded-lg shadow-sm relative overflow-hidden">
-            <div class="absolute top-0 w-full h-2 bg-navy"></div>
-            
-            <div class="text-6xl font-mono font-black text-navy tracking-wider my-2 drop-shadow-sm flex items-center gap-3">
-              <i data-lucide="timer" class="text-teal w-10 h-10"></i>
-              <span id="timer-display">00:00</span>
-            </div>
+          <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-4 mt-4 z-10">
+            <button
+              id="toggle-timer-btn"
+              class="w-full sm:w-64 py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md bg-navy text-white border-navy hover:bg-[#2A4080]"
+            >
+              計時開始
+            </button>
 
-            <div class="flex flex-col w-full gap-3 mt-4 z-10">
-              <button
-                id="toggle-timer-btn"
-                class="w-full py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md bg-navy text-white border-navy hover:bg-[#2A4080]"
-              >
-                計時開始
-              </button>
-
-              <button
-                id="save-db-btn"
-                class="w-full py-3 rounded-full text-lg font-bold bg-blue-500 text-white border-2 border-blue-600 hover:bg-blue-600 shadow-md flex items-center justify-center gap-2 hidden"
-              >
-                <i data-lucide="save" class="w-6 h-6"></i>
-                儲存成績
-              </button>
-            </div>
+            <button
+              id="save-db-btn"
+              class="w-full sm:w-64 py-3 rounded-full text-lg font-bold bg-blue-500 text-white border-2 border-blue-600 hover:bg-blue-600 shadow-md flex items-center justify-center gap-2 hidden"
+            >
+              <i data-lucide="save" class="w-6 h-6"></i>
+              儲存成績
+            </button>
           </div>
         </div>
 
-        <!-- Right Side: Student Buttons -->
-        <div class="bg-white p-6 rounded-lg border border-steel shadow-sm flex flex-col h-full">
+        <!-- Seat Buttons -->
+        <div class="bg-white p-6 rounded-lg border border-steel shadow-sm flex flex-col">
           <h2 class="text-lg font-bold mb-4 text-navy">點擊座號記錄成績：</h2>
-          <div id="seat-container" class="flex flex-wrap gap-3 justify-center overflow-y-auto p-2 flex-1 items-start content-start">
+          <div id="seat-container" class="flex flex-wrap gap-3 justify-center overflow-y-auto p-2">
             <!-- Seat buttons injected via JS -->
           </div>
         </div>
@@ -179,8 +176,9 @@
     
     <div id="admin-active-panel" class="hidden bg-navy text-white px-4 py-2 rounded-lg shadow-lg border border-teal flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
       <i data-lucide="unlock" class="w-4 h-4"></i>
-      <span class="font-bold text-sm">總管模式開啟</span>
-      <button id="logout-admin-btn" class="ml-2 text-steel hover:text-white underline text-xs">退出</button>
+      <span class="font-bold text-sm">總管模式</span>
+      <button id="change-pwd-btn" class="ml-3 text-teal hover:text-white underline text-xs font-bold">修改密碼</button>
+      <button id="logout-admin-btn" class="ml-3 text-steel hover:text-white underline text-xs">退出</button>
     </div>
     
     <div id="admin-login-panel" class="group relative flex items-center">
@@ -211,7 +209,7 @@
     import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
     // --- System Variables ---
-  const firebaseConfig = {
+ const firebaseConfig = {
   apiKey: "AIzaSyAVFqmk4PcClpfo2TguUX6Cum3ppQ5Qxc0",
   authDomain: "chanesrun.firebaseapp.com",
   projectId: "chanesrun",
@@ -219,10 +217,16 @@
   messagingSenderId: "966853241204",
   appId: "1:966853241204:web:353dda4090ec1da9dae421"
 };
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const hasFirebase = Object.keys(firebaseConfig).length > 0;
+    
+    let app, auth, db;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'changan-ironman-default';
+
+    if (hasFirebase) {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+    }
 
     // --- State Management ---
     let state = {
@@ -233,7 +237,8 @@
       sessionRecords: {}, // { "1": "01:23", "2": "01:45" }
       dbRecords: [], // Array of DB items
       isAdmin: false,
-      timerInterval: null
+      timerInterval: null,
+      adminPassword: localStorage.getItem('adminPwd') || 'admin888'
     };
 
     // --- DOM Elements ---
@@ -252,6 +257,7 @@
       adminPassword: document.getElementById('admin-password'),
       loginAdminBtn: document.getElementById('login-admin-btn'),
       logoutAdminBtn: document.getElementById('logout-admin-btn'),
+      changePwdBtn: document.getElementById('change-pwd-btn'),
       toast: document.getElementById('toast'),
       toastMessage: document.getElementById('toast-message')
     };
@@ -267,8 +273,7 @@
       UI.toastMessage.innerText = msg;
       UI.toast.classList.remove('hidden');
       
-      // Trigger reflow for transition
-      void UI.toast.offsetWidth;
+      void UI.toast.offsetWidth; // Trigger reflow
       UI.toast.classList.remove('opacity-0');
       
       setTimeout(() => {
@@ -277,8 +282,13 @@
       }, 3000);
     };
 
-    // --- Auth Initialization ---
+    // --- Auth & DB Initialization ---
     const initAuth = async () => {
+      if (!hasFirebase) {
+        // Fallback to local storage mode
+        setupDbListener();
+        return;
+      }
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
@@ -290,28 +300,34 @@
       }
     };
 
-    onAuthStateChanged(auth, (currentUser) => {
-      state.user = currentUser;
-      if (currentUser) {
-        setupDbListener();
-      }
-    });
+    if (hasFirebase) {
+      onAuthStateChanged(auth, (currentUser) => {
+        state.user = currentUser;
+        if (currentUser) {
+          setupDbListener();
+        }
+      });
+    }
 
     // --- Database Listener ---
     const setupDbListener = () => {
-      if (!state.user) return;
-      const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
-      
-      onSnapshot(recordsRef, (snapshot) => {
-        state.dbRecords = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })).sort((a, b) => a.seatNumber - b.seatNumber);
-        
+      if (hasFirebase && state.user) {
+        const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
+        onSnapshot(recordsRef, (snapshot) => {
+          state.dbRecords = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })).sort((a, b) => a.seatNumber - b.seatNumber);
+          renderTable();
+        }, (error) => console.error("Error fetching records:", error));
+      } else if (!hasFirebase) {
+        // Load from LocalStorage
+        const localData = localStorage.getItem('ironman_records');
+        if (localData) {
+          state.dbRecords = JSON.parse(localData);
+        }
         renderTable();
-      }, (error) => {
-        console.error("Error fetching records:", error);
-      });
+      }
     };
 
     // --- UI Render Functions ---
@@ -336,22 +352,26 @@
     };
 
     const renderTable = () => {
-      let maxHistoryLength = 0;
-      if (state.dbRecords.length > 0) {
-        maxHistoryLength = Math.max(...state.dbRecords.map(r => r.times?.length || 0));
-      }
-      maxHistoryLength = Math.max(1, maxHistoryLength); // At least 1 column
+      // 收集所有出現過的紀錄時間 (作為欄位名稱)
+      const allDates = new Set();
+      state.dbRecords.forEach(r => {
+        if (r.history) r.history.forEach(h => allDates.add(h.date));
+      });
+      // 按字串時間排序 (YYYY/MM/DD HH:mm 格式)
+      const sortedDates = Array.from(allDates).sort();
 
       // Render Headers
       let headerHTML = `
-        <th class="p-3 border border-steel">座號</th>
-        <th class="p-3 border border-steel text-teal">本次紀錄</th>
+        <th class="p-3 border border-steel w-20">座號</th>
+        <th class="p-3 border border-steel text-teal w-32">本次紀錄</th>
       `;
-      for (let i = 0; i < maxHistoryLength; i++) {
-        headerHTML += `<th class="p-3 border border-steel whitespace-nowrap">歷史 ${i + 1}</th>`;
-      }
+      
+      // 只有管理員能看見歷史紀錄欄位
       if (state.isAdmin) {
-        headerHTML += `<th class="p-3 border border-steel">管理</th>`;
+        sortedDates.forEach(date => {
+          headerHTML += `<th class="p-3 border border-steel whitespace-nowrap text-sm font-normal text-gray-700">${date}</th>`;
+        });
+        headerHTML += `<th class="p-3 border border-steel w-20">管理</th>`;
       }
       UI.tableHeaderRow.innerHTML = headerHTML;
 
@@ -362,9 +382,11 @@
       for (let seat = 1; seat <= state.studentCount; seat++) {
         const dbRecord = state.dbRecords.find(r => r.seatNumber === seat);
         const hasSessionRecord = !!state.sessionRecords[seat];
-        const hasDbRecord = dbRecord && dbRecord.times && dbRecord.times.length > 0;
+        const hasDbRecord = dbRecord && dbRecord.history && dbRecord.history.length > 0;
 
-        if (!hasSessionRecord && !hasDbRecord) continue;
+        // 【規則】未登入總管：僅顯示當下「本次紀錄」有資料的人。登入總管：顯示有「本次」或「歷史」紀錄的人。
+        if (!state.isAdmin && !hasSessionRecord) continue;
+        if (state.isAdmin && !hasSessionRecord && !hasDbRecord) continue;
 
         hasAnyData = true;
         const tr = document.createElement('tr');
@@ -375,14 +397,15 @@
           <td class="p-3 border border-steel font-mono text-teal font-bold text-lg">${state.sessionRecords[seat] || '-'}</td>
         `;
 
-        for (let i = 0; i < maxHistoryLength; i++) {
-          rowHTML += `<td class="p-3 border border-steel font-mono text-gray-600">${(dbRecord && dbRecord.times[i]) ? dbRecord.times[i] : '-'}</td>`;
-        }
-
         if (state.isAdmin) {
+          sortedDates.forEach(date => {
+            const h = dbRecord ? (dbRecord.history || []).find(x => x.date === date) : null;
+            rowHTML += `<td class="p-3 border border-steel font-mono text-gray-600">${h ? h.time : '-'}</td>`;
+          });
+
           rowHTML += `<td class="p-3 border border-steel">`;
           if (hasDbRecord) {
-            rowHTML += `<button data-id="${dbRecord.id}" class="delete-record-btn text-red-500 hover:text-red-700 p-1 bg-red-50 rounded transition-colors" title="刪除此座號歷史"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            rowHTML += `<button data-id="${dbRecord.id}" data-seat="${seat}" class="delete-record-btn text-red-500 hover:text-red-700 p-1 bg-red-50 rounded transition-colors" title="刪除此座號歷史"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
           }
           rowHTML += `</td>`;
         }
@@ -392,21 +415,21 @@
       }
 
       if (!hasAnyData) {
-        UI.tableBody.innerHTML = `<tr><td colspan="${maxHistoryLength + 3}" class="p-8 text-gray-500 italic">尚無成績紀錄，請開始計時！</td></tr>`;
+        const colSpan = state.isAdmin ? (sortedDates.length + 3) : 2;
+        const emptyMsg = state.isAdmin ? "尚無成績紀錄，請開始計時！" : "尚無本次紀錄，請計時後點擊座號儲存。";
+        UI.tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-gray-500 italic">${emptyMsg}</td></tr>`;
       }
 
       // Attach event listeners to delete buttons
       document.querySelectorAll('.delete-record-btn').forEach(btn => {
-        btn.onclick = () => handleDeleteRecord(btn.getAttribute('data-id'));
+        btn.onclick = () => handleDeleteRecord(btn.getAttribute('data-id'), parseInt(btn.getAttribute('data-seat')));
       });
 
-      // Update Lucide icons inside newly rendered HTML
-      lucide.createIcons();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       updateVisibility();
     };
 
     const updateVisibility = () => {
-      // Toggle Timer Button
       if (state.isRunning) {
         UI.toggleTimerBtn.innerText = '計時結束';
         UI.toggleTimerBtn.className = "w-full py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md bg-teal text-white border-teal hover:bg-teal-dark";
@@ -422,11 +445,9 @@
         }
       }
 
-      // Input Disabled State
       const hasRecords = Object.keys(state.sessionRecords).length > 0;
       UI.studentCountInput.disabled = state.isRunning || hasRecords;
 
-      // Admin Panels
       if (state.isAdmin) {
         UI.adminActivePanel.classList.remove('hidden');
         UI.adminLoginPanel.classList.add('hidden');
@@ -441,11 +462,9 @@
     // --- Action Handlers ---
     const handleToggleTimer = () => {
       if (state.isRunning) {
-        // Stop
         state.isRunning = false;
         clearInterval(state.timerInterval);
       } else {
-        // Start
         state.isRunning = true;
         if (state.time === 0) {
           state.sessionRecords = {};
@@ -473,40 +492,59 @@
     };
 
     const handleSaveToDB = async () => {
-      if (!state.user) {
-        showToast("尚未連接至資料庫，請稍後再試。");
-        return;
-      }
-      
       const recordsToSave = Object.entries(state.sessionRecords);
       if (recordsToSave.length === 0) {
         showToast("本次無新紀錄可儲存！");
         return;
       }
 
+      UI.saveDbBtn.innerHTML = `<i data-lucide="loader" class="w-6 h-6 animate-spin"></i> 儲存中...`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      UI.saveDbBtn.disabled = true;
+
+      // 產生格式化的紀錄時間 (YYYY/MM/DD HH:mm)
+      const now = new Date();
+      const saveTime = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
       try {
-        UI.saveDbBtn.innerHTML = `<i data-lucide="loader" class="w-6 h-6 animate-spin"></i> 儲存中...`;
-        lucide.createIcons();
-        UI.saveDbBtn.disabled = true;
+        if (hasFirebase && state.user) {
+          // Cloud Storage
+          for (const [seatStr, timeStr] of recordsToSave) {
+            const seat = parseInt(seatStr);
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', `seat_${seat}`);
+            const docSnap = await getDoc(docRef);
 
-        for (const [seatStr, timeStr] of recordsToSave) {
-          const seat = parseInt(seatStr);
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', `seat_${seat}`);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            await updateDoc(docRef, {
-              times: [...(data.times || []), timeStr]
-            });
-          } else {
-            await setDoc(docRef, {
-              seatNumber: seat,
-              times: [timeStr]
-            });
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              // 兼容舊資料轉換為帶時間戳的新格式
+              const history = data.history || (data.times ? data.times.map((t, i) => ({ date: `舊紀錄 ${i+1}`, time: t })) : []);
+              await updateDoc(docRef, { history: [...history, { date: saveTime, time: timeStr }] });
+            } else {
+              await setDoc(docRef, { seatNumber: seat, history: [{ date: saveTime, time: timeStr }] });
+            }
           }
+          showToast("成績已儲存至雲端資料庫！");
+        } else {
+          // Local Storage Fallback
+          for (const [seatStr, timeStr] of recordsToSave) {
+            const seat = parseInt(seatStr);
+            let existingRecord = state.dbRecords.find(r => r.seatNumber === seat);
+            
+            if (existingRecord) {
+              if (!existingRecord.history) {
+                 existingRecord.history = (existingRecord.times || []).map((t, i) => ({ date: `舊紀錄 ${i+1}`, time: t }));
+              }
+              existingRecord.history.push({ date: saveTime, time: timeStr });
+            } else {
+              state.dbRecords.push({ id: `seat_${seat}`, seatNumber: seat, history: [{ date: saveTime, time: timeStr }] });
+            }
+          }
+          state.dbRecords.sort((a, b) => a.seatNumber - b.seatNumber);
+          localStorage.setItem('ironman_records', JSON.stringify(state.dbRecords));
+          showToast("成績已儲存至瀏覽器！");
         }
-        showToast("成績已成功儲存至玉簡（資料庫）！");
+
+        // Reset session
         state.sessionRecords = {};
         state.time = 0;
         UI.timerDisplay.innerText = "00:00";
@@ -517,7 +555,7 @@
         showToast("儲存失敗，請重試。");
       } finally {
         UI.saveDbBtn.innerHTML = `<i data-lucide="save" class="w-6 h-6"></i> 儲存成績`;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         UI.saveDbBtn.disabled = false;
         updateVisibility();
       }
@@ -537,7 +575,7 @@
 
     // --- Admin Handlers ---
     const handleAdminLogin = () => {
-      if (UI.adminPassword.value === 'admin888') {
+      if (UI.adminPassword.value === state.adminPassword) {
         state.isAdmin = true;
         UI.adminPassword.value = '';
         renderTable();
@@ -549,14 +587,20 @@
     };
 
     const handleDeleteAllRecords = async () => {
-      if (!state.user || !state.isAdmin) return;
-      if(!confirm("確定要清空所有資料庫中的歷史紀錄嗎？此動作無法復原！")) return;
+      if (!state.isAdmin) return;
+      if(!confirm("確定要清空所有歷史紀錄嗎？此動作無法復原！")) return;
 
       try {
-        const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
-        const snapshot = await getDocs(recordsRef);
-        const deletePromises = snapshot.docs.map(document => deleteDoc(document.ref));
-        await Promise.all(deletePromises);
+        if (hasFirebase && state.user) {
+          const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
+          const snapshot = await getDocs(recordsRef);
+          const deletePromises = snapshot.docs.map(document => deleteDoc(document.ref));
+          await Promise.all(deletePromises);
+        } else {
+          state.dbRecords = [];
+          localStorage.removeItem('ironman_records');
+          renderTable();
+        }
         showToast("所有歷史紀錄已徹底清除！");
       } catch (error) {
         console.error("Error deleting all records:", error);
@@ -564,14 +608,20 @@
       }
     };
 
-    const handleDeleteRecord = async (docId) => {
-      if (!state.user || !state.isAdmin) return;
-      if(!confirm("確定要刪除此座號的所有歷史紀錄嗎？")) return;
+    const handleDeleteRecord = async (docId, seatNumber) => {
+      if (!state.isAdmin) return;
+      if(!confirm(`確定要刪除座號 ${seatNumber} 的所有歷史紀錄嗎？`)) return;
 
       try {
-        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', docId);
-        await deleteDoc(docRef);
-        showToast("該座號紀錄已刪除。");
+        if (hasFirebase && state.user) {
+          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', docId);
+          await deleteDoc(docRef);
+        } else {
+          state.dbRecords = state.dbRecords.filter(r => r.seatNumber !== seatNumber);
+          localStorage.setItem('ironman_records', JSON.stringify(state.dbRecords));
+          renderTable();
+        }
+        showToast(`座號 ${seatNumber} 的紀錄已刪除。`);
       } catch (error) {
         console.error("Error deleting record:", error);
         showToast("刪除失敗。");
@@ -595,6 +645,17 @@
     UI.adminPassword.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleAdminLogin();
     });
+    
+    // 修改密碼綁定
+    UI.changePwdBtn.addEventListener('click', () => {
+      const newPwd = prompt('請輸入新的總管密碼：');
+      if (newPwd && newPwd.trim() !== '') {
+        state.adminPassword = newPwd.trim();
+        localStorage.setItem('adminPwd', state.adminPassword);
+        showToast('密碼已成功修改！');
+      }
+    });
+
     UI.logoutAdminBtn.addEventListener('click', () => {
       state.isAdmin = false;
       renderTable();
@@ -604,7 +665,7 @@
     UI.deleteAllBtn.addEventListener('click', handleDeleteAllRecords);
 
     // --- Initialization ---
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     initAuth();
     renderSeats();
     renderTable();
