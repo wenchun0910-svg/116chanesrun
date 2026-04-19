@@ -158,15 +158,6 @@
       <div class="bg-white border-2 border-haifuji rounded-lg shadow-sm overflow-hidden w-full flex flex-col">
         <div class="bg-aizome text-kinari py-4 px-6 font-bold text-2xl border-b-4 border-asagi flex justify-between items-center flex-wrap gap-4 tracking-wider">
           <span id="table-title">英雄榜（本次成績紀錄）</span>
-          <!-- Admin Controls (Visible when querying history) -->
-          <div id="admin-controls" class="hidden flex flex-wrap gap-3 items-center">
-            <span class="text-sm text-haifuji mr-2 border-r border-haifuji pr-4">總管模式開啟</span>
-            <button id="change-pwd-btn" class="text-sm bg-transparent text-white px-4 py-2 border border-white hover:bg-white hover:text-aizome transition-colors font-bold">修改密碼</button>
-            <button id="delete-all-btn" class="text-sm bg-kurenai text-white px-4 py-2 hover:bg-[#A31637] flex items-center gap-2 transition-colors font-bold shadow-md">
-              <i data-lucide="trash-2" class="w-4 h-4"></i> 清空所有歷史
-            </button>
-            <button id="exit-history-btn" class="text-sm bg-haifuji text-aizome font-bold px-4 py-2 hover:bg-white transition-colors shadow-md">退出查詢</button>
-          </div>
         </div>
         
         <div class="overflow-x-auto p-4">
@@ -184,6 +175,35 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- History Modal (New Window) -->
+  <div id="history-modal" class="hidden fixed inset-0 bg-aizome/80 z-50 flex items-center justify-center p-4 md:p-8 backdrop-blur-sm transition-opacity">
+    <div class="bg-kinari rounded-lg border-4 border-asagi w-full max-w-7xl max-h-full flex flex-col shadow-2xl relative overflow-hidden">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center p-6 border-b-4 border-asagi bg-white">
+        <h3 class="text-3xl font-black text-aizome tracking-widest flex items-center gap-3">
+          <i data-lucide="database" class="w-8 h-8 text-asagi"></i> 歷史成績查詢 (總管模式)
+        </h3>
+        <div class="flex items-center gap-4">
+           <button id="change-pwd-btn" class="text-sm bg-transparent text-aizome px-4 py-2 border-2 border-aizome hover:bg-aizome hover:text-white transition-colors font-bold rounded-sm shadow-sm">修改密碼</button>
+           <button id="close-modal-btn" class="text-haifuji hover:text-kurenai bg-aizome hover:bg-white rounded-full transition-colors p-1"><i data-lucide="x-circle" class="w-10 h-10"></i></button>
+        </div>
+      </div>
+      <!-- Modal Body (Table) -->
+      <div class="p-6 overflow-auto flex-1 bg-shironeri">
+         <table class="w-full text-center border-collapse" id="history-table">
+            <thead>
+              <tr class="bg-kinari text-aizome border-b-4 border-aizome" id="history-header-row">
+                <!-- Injected via JS -->
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <!-- Injected via JS -->
+            </tbody>
+         </table>
+      </div>
     </div>
   </div>
 
@@ -206,7 +226,7 @@
     import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
     // --- System Variables ---
- const firebaseConfig = {
+    const firebaseConfig = {
   apiKey: "AIzaSyAVFqmk4PcClpfo2TguUX6Cum3ppQ5Qxc0",
   authDomain: "chanesrun.firebaseapp.com",
   projectId: "chanesrun",
@@ -214,6 +234,7 @@
   messagingSenderId: "966853241204",
   appId: "1:966853241204:web:353dda4090ec1da9dae421"
 };
+
     const hasFirebase = Object.keys(firebaseConfig).length > 0;
     
     let app, auth, db;
@@ -247,12 +268,13 @@
       queryHistoryBtn: document.getElementById('query-history-btn'),
       seatContainer: document.getElementById('seat-container'),
       tableTitle: document.getElementById('table-title'),
-      adminControls: document.getElementById('admin-controls'),
       tableHeaderRow: document.getElementById('table-header-row'),
       tableBody: document.getElementById('table-body'),
-      deleteAllBtn: document.getElementById('delete-all-btn'),
+      historyModal: document.getElementById('history-modal'),
+      historyHeaderRow: document.getElementById('history-header-row'),
+      historyBody: document.getElementById('history-body'),
+      closeModalBtn: document.getElementById('close-modal-btn'),
       changePwdBtn: document.getElementById('change-pwd-btn'),
-      exitHistoryBtn: document.getElementById('exit-history-btn'),
       resetBtn: document.getElementById('reset-btn'),
       toast: document.getElementById('toast'),
       toastMessage: document.getElementById('toast-message')
@@ -307,12 +329,12 @@
           state.dbRecords = snapshot.docs.map(doc => ({
             id: doc.id, ...doc.data()
           })).sort((a, b) => a.seatNumber - b.seatNumber);
-          if (state.isAdmin) renderTable();
+          if (state.isAdmin) renderHistoryTable();
         }, (error) => console.error("Error fetching records:", error));
       } else if (!hasFirebase) {
         const localData = localStorage.getItem('ironman_records');
         if (localData) state.dbRecords = JSON.parse(localData);
-        if (state.isAdmin) renderTable();
+        if (state.isAdmin) renderHistoryTable();
       }
     };
 
@@ -338,76 +360,89 @@
     };
 
     const renderTable = () => {
+      // Main table now ONLY renders current session records
+      UI.tableBody.innerHTML = '';
+      let hasAnyData = false;
+
+      for (let seat = 1; seat <= state.studentCount; seat++) {
+        const hasSessionRecord = !!state.sessionRecords[seat];
+        if (!hasSessionRecord) continue;
+
+        hasAnyData = true;
+        const tr = document.createElement('tr');
+        tr.className = "border-b-2 border-haifuji hover:bg-shironeri transition-colors";
+        
+        tr.innerHTML = `
+          <td class="p-5 font-black text-3xl border-2 border-haifuji bg-kinari text-aizome">${seat}</td>
+          <td class="p-5 border-2 border-haifuji font-sans font-bold text-asagi text-2xl tracking-wider">${state.sessionRecords[seat]}</td>
+        `;
+        UI.tableBody.appendChild(tr);
+      }
+
+      if (!hasAnyData) {
+        UI.tableBody.innerHTML = `<tr><td colspan="2" class="p-12 text-gray-400 italic text-2xl tracking-widest">尚無本次紀錄，請計時後點擊座號儲存。</td></tr>`;
+      }
+    };
+
+    const renderHistoryTable = () => {
       const allDates = new Set();
       state.dbRecords.forEach(r => {
         if (r.history) r.history.forEach(h => allDates.add(h.date));
       });
       const sortedDates = Array.from(allDates).sort();
 
-      let headerHTML = `
-        <th class="p-4 border-2 border-haifuji w-24 text-2xl tracking-widest">座號</th>
-        <th class="p-4 border-2 border-haifuji text-asagi w-40 text-2xl tracking-widest">本次紀錄</th>
-      `;
+      // Render Modal Headers (With Column Delete Buttons)
+      let headerHTML = `<th class="p-4 border-2 border-haifuji w-24 text-2xl tracking-widest bg-kinari whitespace-nowrap">座號</th>`;
       
-      if (state.isAdmin) {
-        sortedDates.forEach(date => {
-          headerHTML += `<th class="p-4 border-2 border-haifuji whitespace-nowrap text-lg font-bold text-gray-700">${date}</th>`;
-        });
-        headerHTML += `<th class="p-4 border-2 border-haifuji w-24 text-xl tracking-widest">管理</th>`;
-        UI.tableTitle.innerText = "英雄榜（所有歷史紀錄）";
-      } else {
-        UI.tableTitle.innerText = "英雄榜（本次成績紀錄）";
-      }
+      sortedDates.forEach(date => {
+        headerHTML += `
+          <th class="p-4 border-2 border-haifuji min-w-[150px] bg-kinari">
+            <div class="flex flex-col items-center gap-2">
+              <span class="text-xl font-bold text-aizome tracking-wider">${date}</span>
+              <button data-date="${date}" class="delete-col-btn text-sm bg-kurenai text-white px-3 py-1 rounded-sm hover:bg-[#A31637] flex items-center gap-1 shadow-sm transition-colors mt-2 font-bold">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> 刪除此欄
+              </button>
+            </div>
+          </th>
+        `;
+      });
+      UI.historyHeaderRow.innerHTML = headerHTML;
       
-      UI.tableHeaderRow.innerHTML = headerHTML;
-      UI.tableBody.innerHTML = '';
+      // Render Modal Body
+      UI.historyBody.innerHTML = '';
       let hasAnyData = false;
 
       for (let seat = 1; seat <= state.studentCount; seat++) {
         const dbRecord = state.dbRecords.find(r => r.seatNumber === seat);
-        const hasSessionRecord = !!state.sessionRecords[seat];
         const hasDbRecord = dbRecord && dbRecord.history && dbRecord.history.length > 0;
 
-        if (!state.isAdmin && !hasSessionRecord) continue;
-        if (state.isAdmin && !hasSessionRecord && !hasDbRecord) continue;
-
+        if (!hasDbRecord) continue;
         hasAnyData = true;
-        const tr = document.createElement('tr');
-        tr.className = "border-b-2 border-haifuji hover:bg-shironeri transition-colors";
-        
-        let rowHTML = `
-          <td class="p-5 font-black text-3xl border-2 border-haifuji bg-kinari text-aizome">${seat}</td>
-          <td class="p-5 border-2 border-haifuji font-sans font-bold text-asagi text-2xl tracking-wider">${state.sessionRecords[seat] || '-'}</td>
-        `;
 
-        if (state.isAdmin) {
-          sortedDates.forEach(date => {
-            const h = dbRecord ? (dbRecord.history || []).find(x => x.date === date) : null;
-            rowHTML += `<td class="p-5 border-2 border-haifuji font-sans text-gray-700 text-xl tracking-wider">${h ? h.time : '-'}</td>`;
-          });
-          rowHTML += `<td class="p-4 border-2 border-haifuji">`;
-          if (hasDbRecord) {
-            rowHTML += `<button data-id="${dbRecord.id}" data-seat="${seat}" class="delete-record-btn text-kurenai hover:text-white hover:bg-kurenai p-3 border-2 border-kurenai rounded-sm transition-colors shadow-sm" title="刪除此座號歷史"><i data-lucide="trash-2" class="w-6 h-6"></i></button>`;
-          }
-          rowHTML += `</td>`;
-        }
+        const tr = document.createElement('tr');
+        tr.className = "border-b-2 border-haifuji hover:bg-white transition-colors";
+        
+        let rowHTML = `<td class="p-4 font-black text-2xl border-2 border-haifuji bg-shironeri text-aizome">${seat}</td>`;
+
+        sortedDates.forEach(date => {
+          const h = dbRecord ? (dbRecord.history || []).find(x => x.date === date) : null;
+          rowHTML += `<td class="p-4 border-2 border-haifuji font-sans text-aizome text-2xl tracking-wider font-bold">${h ? h.time : '-'}</td>`;
+        });
 
         tr.innerHTML = rowHTML;
-        UI.tableBody.appendChild(tr);
+        UI.historyBody.appendChild(tr);
       }
 
       if (!hasAnyData) {
-        const colSpan = state.isAdmin ? (sortedDates.length + 3) : 2;
-        const emptyMsg = state.isAdmin ? "尚無成績紀錄，請開始計時並儲存！" : "尚無本次紀錄，請計時後點擊座號儲存。";
-        UI.tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="p-12 text-gray-400 italic text-2xl tracking-widest">${emptyMsg}</td></tr>`;
+        UI.historyBody.innerHTML = `<tr><td colspan="${sortedDates.length + 1}" class="p-12 text-gray-400 italic text-2xl tracking-widest">目前尚無任何歷史紀錄。</td></tr>`;
       }
 
-      document.querySelectorAll('.delete-record-btn').forEach(btn => {
-        btn.onclick = () => handleDeleteRecord(btn.getAttribute('data-id'), parseInt(btn.getAttribute('data-seat')));
+      // Attach column delete events
+      document.querySelectorAll('.delete-col-btn').forEach(btn => {
+        btn.onclick = () => handleDeleteColumn(btn.getAttribute('data-date'));
       });
 
       if (typeof lucide !== 'undefined') lucide.createIcons();
-      updateVisibility();
     };
 
     const updateVisibility = () => {
@@ -433,13 +468,6 @@
         UI.queryHistoryBtn.classList.add('hidden');
       } else {
         UI.queryHistoryBtn.classList.remove('hidden');
-      }
-
-      if (state.isAdmin) {
-        UI.adminControls.classList.remove('hidden');
-        UI.queryHistoryBtn.classList.add('hidden');
-      } else {
-        UI.adminControls.classList.add('hidden');
       }
     };
 
@@ -522,6 +550,7 @@
         showToast("成績已成功儲存！");
         renderSeats();
         renderTable();
+        if(state.isAdmin) renderHistoryTable();
       } catch (error) {
         console.error("Error saving:", error);
         showToast("儲存失敗，請重試。");
@@ -534,54 +563,41 @@
     };
 
     const handleQueryHistory = () => {
-      const pwd = prompt("請輸入總管密碼以查詢歷史紀錄：");
+      const pwd = prompt("請輸入總管密碼以開啟歷史查詢視窗：");
       if (pwd === state.adminPassword) {
         state.isAdmin = true;
-        renderTable();
+        renderHistoryTable();
+        UI.historyModal.classList.remove('hidden');
         showToast("已進入歷史查詢模式。");
       } else if (pwd !== null) {
         showToast("密碼錯誤！");
       }
     };
 
-    const handleDeleteAllRecords = async () => {
+    const handleDeleteColumn = async (targetDate) => {
       if (!state.isAdmin) return;
-      if(!confirm("確定要清空所有歷史紀錄嗎？此動作無法復原！")) return;
+      if(!confirm(`確定要刪除「${targetDate}」的所有成績紀錄嗎？\n⚠️ 此動作會將全班該次成績移除，且無法復原！`)) return;
 
       try {
         if (hasFirebase && state.user) {
-          const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
-          const snapshot = await getDocs(recordsRef);
-          const deletePromises = snapshot.docs.map(document => deleteDoc(document.ref));
-          await Promise.all(deletePromises);
+          for (const record of state.dbRecords) {
+            const updatedHistory = (record.history || []).filter(h => h.date !== targetDate);
+            if (updatedHistory.length !== (record.history || []).length) {
+              const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', record.id);
+              await updateDoc(docRef, { history: updatedHistory });
+            }
+          }
         } else {
-          state.dbRecords = [];
-          localStorage.removeItem('ironman_records');
-          renderTable();
-        }
-        showToast("所有歷史紀錄已徹底清除！");
-      } catch (error) {
-        console.error("Error deleting:", error);
-        showToast("清除失敗。");
-      }
-    };
-
-    const handleDeleteRecord = async (docId, seatNumber) => {
-      if (!state.isAdmin) return;
-      if(!confirm(`確定要刪除座號 ${seatNumber} 的所有歷史紀錄嗎？`)) return;
-
-      try {
-        if (hasFirebase && state.user) {
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', docId);
-          await deleteDoc(docRef);
-        } else {
-          state.dbRecords = state.dbRecords.filter(r => r.seatNumber !== seatNumber);
+          state.dbRecords = state.dbRecords.map(record => ({
+             ...record,
+             history: (record.history || []).filter(h => h.date !== targetDate)
+          }));
           localStorage.setItem('ironman_records', JSON.stringify(state.dbRecords));
-          renderTable();
         }
-        showToast(`座號 ${seatNumber} 的紀錄已刪除。`);
+        showToast(`已刪除 ${targetDate} 的成績紀錄！`);
+        if(!hasFirebase) renderHistoryTable();
       } catch (error) {
-        console.error("Error deleting:", error);
+        console.error("Error deleting column:", error);
         showToast("刪除失敗。");
       }
     };
@@ -612,12 +628,12 @@
     UI.saveDbBtn.addEventListener('click', handleSaveToDB);
     UI.queryHistoryBtn.addEventListener('click', handleQueryHistory);
     UI.resetBtn.addEventListener('click', handleReset);
-    UI.deleteAllBtn.addEventListener('click', handleDeleteAllRecords);
     
-    UI.exitHistoryBtn.addEventListener('click', () => {
-      state.isAdmin = false;
-      renderTable();
-      showToast("已退出歷史查詢。");
+    // Modal Close
+    UI.closeModalBtn.addEventListener('click', () => {
+      UI.historyModal.classList.add('hidden');
+      state.isAdmin = false; 
+      showToast("已關閉歷史查詢。");
     });
 
     UI.changePwdBtn.addEventListener('click', () => {
