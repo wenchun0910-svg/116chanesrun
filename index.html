@@ -1,0 +1,466 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  signInWithCustomToken, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  onSnapshot, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc,
+  getDocs
+} from 'firebase/firestore';
+import { Timer, Save, RotateCcw, Trash2, Lock, Unlock, CheckCircle } from 'lucide-react';
+
+// --- Firebase Initialization ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'changan-ironman-default';
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  
+  // State for App
+  const [studentCount, setStudentCount] = useState(() => {
+    const saved = localStorage.getItem('studentCount');
+    return saved ? parseInt(saved, 10) : 30;
+  });
+  const [time, setTime] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [sessionRecords, setSessionRecords] = useState({}); // { seatNumber: "MM:SS" }
+  const [dbRecords, setDbRecords] = useState([]); // Array of { seatNumber, times: [] }
+  
+  // Admin & UI State
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // --- Persist Student Count ---
+  useEffect(() => {
+    localStorage.setItem('studentCount', studentCount.toString());
+  }, [studentCount]);
+
+  // --- Auth Setup ---
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("Authentication failed:", error);
+      }
+    };
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // --- Fetch Database Records ---
+  useEffect(() => {
+    if (!user) return;
+
+    const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
+    const unsubscribe = onSnapshot(recordsRef, (snapshot) => {
+      const records = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Sort by seat number
+      records.sort((a, b) => a.seatNumber - b.seatNumber);
+      setDbRecords(records);
+    }, (error) => {
+      console.error("Error fetching records:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // --- Timer Logic ---
+  useEffect(() => {
+    let interval;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setTime((prevTime) => prevTime + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const formatTime = (totalSeconds) => {
+    const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  };
+
+  // --- Interaction Handlers ---
+  const handleToggleTimer = () => {
+    if (isRunning) {
+      // Stop Timer
+      setIsRunning(false);
+    } else {
+      // Start Timer
+      setIsRunning(true);
+      if (time === 0) {
+        setSessionRecords({}); // Clear current session if starting fresh
+      }
+    }
+  };
+
+  const handleRecordTime = (seatNumber) => {
+    if (!isRunning) {
+      showToast("請先點擊「計時開始」！");
+      return;
+    }
+    if (sessionRecords[seatNumber]) return; // Already recorded
+
+    setSessionRecords(prev => ({
+      ...prev,
+      [seatNumber]: formatTime(time)
+    }));
+  };
+
+  const handleSaveToDB = async () => {
+    if (!user) {
+      showToast("尚未連接至資料庫，請稍後再試。");
+      return;
+    }
+    
+    if (Object.keys(sessionRecords).length === 0) {
+      showToast("本次無新紀錄可儲存！");
+      return;
+    }
+
+    try {
+      for (const [seatStr, timeStr] of Object.entries(sessionRecords)) {
+        const seat = parseInt(seatStr);
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', `seat_${seat}`);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          await updateDoc(docRef, {
+            times: [...(data.times || []), timeStr]
+          });
+        } else {
+          await setDoc(docRef, {
+            seatNumber: seat,
+            times: [timeStr]
+          });
+        }
+      }
+      showToast("成績已成功儲存至玉簡（資料庫）！");
+      // Clear session records after successful save to avoid duplicate saves
+      setSessionRecords({});
+      setTime(0);
+    } catch (error) {
+      console.error("Error saving records:", error);
+      showToast("儲存失敗，請重試。");
+    }
+  };
+
+  const handleReset = () => {
+    setIsRunning(false);
+    setTime(0);
+    setSessionRecords({});
+    showToast("畫面資料已重置。");
+  };
+
+  // --- Admin Functions ---
+  const handleAdminLogin = () => {
+    // 簡單的管理員密碼驗證
+    if (adminPassword === 'admin888') {
+      setIsAdmin(true);
+      setAdminPassword('');
+      showToast("已進入總管模式。");
+    } else {
+      showToast("密碼錯誤！");
+    }
+  };
+
+  const handleDeleteAllRecords = async () => {
+    if (!user || !isAdmin) return;
+    try {
+      const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
+      const snapshot = await getDocs(recordsRef);
+      const deletePromises = snapshot.docs.map(document => deleteDoc(document.ref));
+      await Promise.all(deletePromises);
+      showToast("所有歷史紀錄已徹底清除！");
+    } catch (error) {
+      console.error("Error deleting all records:", error);
+      showToast("清除失敗。");
+    }
+  };
+
+  const handleDeleteRecord = async (docId) => {
+    if (!user || !isAdmin) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', docId);
+      await deleteDoc(docRef);
+      showToast("該座號紀錄已刪除。");
+    } catch (error) {
+      console.error("Error deleting record:", error);
+      showToast("刪除失敗。");
+    }
+  };
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  // --- Derived Data for UI ---
+  const seats = Array.from({ length: studentCount }, (_, i) => i + 1);
+  const maxHistoryLength = Math.max(0, ...dbRecords.map(r => r.times?.length || 0));
+
+  return (
+    <div className="min-h-screen bg-[#F0F8FF] font-sans text-[#1C2C5B] p-4 md:p-8 relative selection:bg-[#1C2C5B] selection:text-white">
+      
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-[#1C2C5B] text-white px-6 py-3 rounded-md shadow-lg border border-[#00A3AF] flex items-center gap-2 animate-bounce">
+          <CheckCircle size={20} className="text-[#00A3AF]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Main Container - Japanese Minimalist Style */}
+      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-[#A0C4E2] relative overflow-hidden">
+        
+        {/* Header */}
+        <div className="bg-[#1C2C5B] text-white py-6 text-center relative border-b-4 border-[#00A3AF]">
+          <h1 className="text-3xl md:text-5xl font-black tracking-widest drop-shadow-md">
+            長安小鐵人計時表
+          </h1>
+          <div className="absolute left-0 bottom-0 w-full h-1 bg-gradient-to-r from-transparent via-[#00A3AF] to-transparent opacity-50"></div>
+        </div>
+
+        <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left Column: Settings, Timer, and Buttons */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            
+            {/* Settings */}
+            <div className="bg-white p-6 rounded-lg border border-[#A0C4E2] shadow-sm">
+              <label className="block text-lg font-bold mb-2 text-[#1C2C5B]">
+                設定班級人數：
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={studentCount}
+                onChange={(e) => setStudentCount(Math.max(1, parseInt(e.target.value) || 0))}
+                disabled={isRunning || Object.keys(sessionRecords).length > 0}
+                className="w-full text-xl p-2 border-2 border-[#1C2C5B] rounded-md focus:outline-none focus:ring-2 focus:ring-[#00A3AF] bg-[#F0F8FF] disabled:opacity-50"
+              />
+            </div>
+
+            {/* Timer Display (Moved Above Seat Buttons) */}
+            <div className="bg-white border-2 border-[#1C2C5B] p-6 flex flex-col items-center justify-center rounded-lg shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 w-full h-2 bg-[#1C2C5B]"></div>
+              
+              <div className="text-6xl font-mono font-black text-[#1C2C5B] tracking-wider my-2 drop-shadow-sm flex items-center gap-3">
+                <Timer size={40} className="text-[#00A3AF]" />
+                {formatTime(time)}
+              </div>
+
+              <div className="flex flex-col w-full gap-3 mt-4 z-10">
+                <button
+                  onClick={handleToggleTimer}
+                  className={`w-full py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md
+                    ${isRunning 
+                      ? 'bg-[#00A3AF] text-white border-[#00A3AF] hover:bg-[#008994]' 
+                      : 'bg-[#1C2C5B] text-white border-[#1C2C5B] hover:bg-[#2A4080]'
+                    }`}
+                >
+                  {isRunning ? '計時結束' : '計時開始'}
+                </button>
+
+                {!isRunning && Object.keys(sessionRecords).length > 0 && (
+                  <button
+                    onClick={handleSaveToDB}
+                    className="w-full py-3 rounded-full text-lg font-bold bg-[#3B82F6] text-white border-2 border-[#2563EB] hover:bg-[#2563EB] shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Save size={24} />
+                    儲存成績
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Student Buttons */}
+            <div className="bg-white p-6 rounded-lg border border-[#A0C4E2] shadow-sm flex-1">
+              <h2 className="text-lg font-bold mb-4 text-[#1C2C5B]">點擊座號記錄成績：</h2>
+              <div className="flex flex-wrap gap-3 justify-center max-h-[350px] overflow-y-auto p-2">
+                {seats.map((seat) => {
+                  const isRecorded = !!sessionRecords[seat];
+                  return (
+                    <button
+                      key={seat}
+                      onClick={() => handleRecordTime(seat)}
+                      disabled={isRecorded || !isRunning}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shadow-sm transition-all duration-200 border-2 
+                        ${isRecorded 
+                          ? 'bg-[#E5E5E5] text-[#A9A9A9] border-[#A9A9A9] cursor-not-allowed transform scale-95' 
+                          : 'bg-[#1C2C5B] text-white border-[#00A3AF] hover:bg-[#2A4080] hover:scale-105 active:scale-95 cursor-pointer'
+                        }
+                        ${!isRunning && !isRecorded ? 'opacity-70' : 'opacity-100'}
+                      `}
+                    >
+                      {seat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Table */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            
+            {/* Results Table */}
+            <div className="bg-white border border-[#A0C4E2] rounded-lg shadow-sm overflow-hidden flex-1 flex flex-col">
+              <div className="bg-[#1C2C5B] text-white py-3 px-4 font-bold text-lg flex justify-between items-center border-b-2 border-[#00A3AF]">
+                <span>英雄榜（成績紀錄）</span>
+                {isAdmin && (
+                  <button 
+                    onClick={handleDeleteAllRecords}
+                    className="text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 flex items-center gap-1 border border-red-700 transition-colors"
+                  >
+                    <Trash2 size={14} /> 清空所有歷史
+                  </button>
+                )}
+              </div>
+              <div className="overflow-x-auto flex-1 p-2">
+                <table className="w-full text-center border-collapse">
+                  <thead>
+                    <tr className="bg-[#E6F0FA] text-[#1C2C5B] border-b-2 border-[#1C2C5B]">
+                      <th className="p-3 border border-[#A0C4E2]">座號</th>
+                      <th className="p-3 border border-[#A0C4E2] text-[#00A3AF]">本次紀錄</th>
+                      {Array.from({ length: Math.max(1, maxHistoryLength) }).map((_, idx) => (
+                        <th key={idx} className="p-3 border border-[#A0C4E2] whitespace-nowrap">
+                          歷史 {idx + 1}
+                        </th>
+                      ))}
+                      {isAdmin && <th className="p-3 border border-[#A0C4E2]">管理</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seats.map((seat) => {
+                      const dbRecord = dbRecords.find(r => r.seatNumber === seat);
+                      const hasSessionRecord = !!sessionRecords[seat];
+                      const hasDbRecord = dbRecord && dbRecord.times.length > 0;
+                      
+                      if (!hasSessionRecord && !hasDbRecord) return null; // Hide empty rows to save space
+
+                      return (
+                        <tr key={seat} className="border-b border-[#A0C4E2] hover:bg-[#F0F8FF] transition-colors">
+                          <td className="p-3 font-bold text-lg border border-[#A0C4E2] bg-[#F8FAFC]">
+                            {seat}
+                          </td>
+                          <td className="p-3 border border-[#A0C4E2] font-mono text-[#00A3AF] font-bold text-lg">
+                            {sessionRecords[seat] || '-'}
+                          </td>
+                          
+                          {Array.from({ length: Math.max(1, maxHistoryLength) }).map((_, idx) => (
+                            <td key={idx} className="p-3 border border-[#A0C4E2] font-mono text-gray-600">
+                              {dbRecord?.times[idx] || '-'}
+                            </td>
+                          ))}
+
+                          {isAdmin && (
+                            <td className="p-3 border border-[#A0C4E2]">
+                              {hasDbRecord && (
+                                <button 
+                                  onClick={() => handleDeleteRecord(dbRecord.id)}
+                                  className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded transition-colors"
+                                  title="刪除此座號歷史"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                    {Object.keys(sessionRecords).length === 0 && dbRecords.length === 0 && (
+                      <tr>
+                        <td colSpan={maxHistoryLength + 3} className="p-8 text-gray-500 italic">
+                          尚無成績紀錄，請開始計時！
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Floating Controls */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-4 z-40">
+        <button
+          onClick={handleReset}
+          className="w-16 h-16 bg-[#00A3AF] text-white rounded-full flex flex-col items-center justify-center shadow-[0_4px_15px_rgba(0,163,175,0.4)] hover:bg-[#008994] hover:scale-110 transition-transform border-2 border-white"
+          title="重置畫面"
+        >
+          <RotateCcw size={28} />
+          <span className="text-xs font-bold mt-1">重置</span>
+        </button>
+      </div>
+
+      {/* Admin Panel (Bottom Left) */}
+      <div className="fixed bottom-6 left-6 z-40 flex items-end">
+        {isAdmin ? (
+          <div className="bg-[#1C2C5B] text-white px-4 py-2 rounded-lg shadow-lg border border-[#00A3AF] flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+            <Unlock size={18} />
+            <span className="font-bold text-sm">總管模式開啟</span>
+            <button onClick={() => setIsAdmin(false)} className="ml-2 text-[#A0C4E2] hover:text-white underline text-xs">退出</button>
+          </div>
+        ) : (
+          <div className="group relative flex items-center">
+            <button className="w-10 h-10 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity hover:bg-gray-300">
+              <Lock size={16} />
+            </button>
+            <div className="absolute left-12 bottom-0 hidden group-hover:flex bg-white p-2 rounded shadow-lg border border-[#A0C4E2] gap-2 w-48">
+              <input 
+                type="password" 
+                placeholder="總管密碼..." 
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="w-full text-sm p-1 border border-gray-300 rounded focus:outline-none focus:border-[#00A3AF]"
+              />
+              <button 
+                onClick={handleAdminLogin}
+                className="bg-[#1C2C5B] text-white px-2 py-1 text-sm rounded hover:bg-[#2A4080] whitespace-nowrap transition-colors"
+              >
+                解鎖
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
