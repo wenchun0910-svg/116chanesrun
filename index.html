@@ -5,23 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>長安小鐵人計時表</title>
   
+  <!-- Google Fonts: Noto Serif TC (For Japanese/Traditional aesthetic) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Tailwind Configuration for Custom Colors -->
+  <!-- Tailwind Configuration for Custom Japanese Colors -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            serif: ['"Noto Serif TC"', 'serif'],
+          },
           colors: {
-            navy: '#1C2C5B',
-            teal: { DEFAULT: '#00A3AF', dark: '#008994' },
-            alice: '#F0F8FF',
-            steel: '#A0C4E2',
-            bglight: '#F8FAFC'
+            aizome: '#1A365D', /* 深靛藍 (藍染) */
+            asagi: '#0089A7', /* 藍綠色 (淺蔥) */
+            kurenai: '#CB1B45', /* 緋紅色 (紅) */
+            kinari: '#FDFBF7', /* 和紙米白 (生成) */
+            haifuji: '#E8ECEF', /* 灰藍底色 */
+            shironeri: '#FCFAF2' /* 極淡的絲綢白 */
           }
         }
       }
@@ -29,128 +38,147 @@
   </script>
 
   <style>
-    /* Custom Scrollbar for the table and seats area */
+    /* Custom Scrollbar for a cleaner look */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
     ::-webkit-scrollbar-track {
-      background: #F0F8FF; 
+      background: #FDFBF7; 
     }
     ::-webkit-scrollbar-thumb {
-      background: #A0C4E2; 
+      background: #0089A7; 
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #1C2C5B; 
+      background: #1A365D; 
     }
     
     .seat-btn {
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .seat-btn:active:not(:disabled) {
-      transform: scale(0.95);
+      transform: scale(0.92);
     }
     .seat-btn:hover:not(:disabled) {
-      transform: scale(1.05);
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 10px 15px -3px rgba(26, 54, 93, 0.3);
     }
   </style>
 </head>
-<body class="min-h-screen bg-alice font-sans text-navy p-4 md:p-8 relative selection:bg-navy selection:text-white">
+<body class="min-h-screen bg-kinari font-serif text-aizome p-4 md:p-8 relative selection:bg-aizome selection:text-white">
 
   <!-- Toast Notification -->
-  <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-navy text-white px-6 py-3 rounded-md shadow-lg border border-teal flex items-center gap-2 transition-opacity duration-300 opacity-0 pointer-events-none hidden">
-    <i data-lucide="check-circle" class="text-teal w-5 h-5"></i>
-    <span id="toast-message"></span>
+  <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-aizome text-white px-8 py-4 rounded-sm shadow-2xl border-2 border-asagi flex items-center gap-3 transition-opacity duration-300 opacity-0 pointer-events-none hidden">
+    <i data-lucide="check-circle" class="text-asagi w-6 h-6"></i>
+    <span id="toast-message" class="font-bold tracking-wide"></span>
   </div>
 
-  <!-- Main Container - Japanese Minimalist Style -->
-  <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-steel relative overflow-hidden">
+  <!-- Main Container -->
+  <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-[0_15px_40px_-15px_rgba(0,0,0,0.15)] border-2 border-haifuji relative overflow-hidden">
     
     <!-- Header -->
-    <div class="bg-navy text-white py-6 text-center relative border-b-4 border-teal">
-      <h1 class="text-3xl md:text-5xl font-black tracking-widest drop-shadow-md">
+    <div class="bg-aizome text-kinari py-8 text-center relative border-b-8 border-asagi">
+      <h1 class="text-4xl md:text-6xl font-black tracking-[0.2em] drop-shadow-lg">
         長安小鐵人計時表
       </h1>
-      <div class="absolute left-0 bottom-0 w-full h-1 bg-gradient-to-r from-transparent via-teal to-transparent opacity-50"></div>
+      <!-- Traditional subtle wave line effect -->
+      <div class="absolute left-0 bottom-0 w-full h-2 bg-gradient-to-r from-transparent via-asagi to-transparent opacity-60"></div>
     </div>
 
-    <div class="p-6 md:p-8 flex flex-col gap-8">
+    <div class="p-6 md:p-10 flex flex-col gap-10">
       
-      <!-- Top Section -->
-      <div class="flex flex-col gap-6">
+      <!-- Top Section: Settings & Timer Side by Side -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         <!-- Settings (Top Left) -->
-        <div class="bg-white p-6 rounded-lg border border-steel shadow-sm w-full md:w-1/3 self-start">
-          <label class="block text-lg font-bold mb-2 text-navy">
-            設定班級人數：
+        <div class="bg-shironeri p-8 rounded-lg border-2 border-haifuji shadow-sm flex flex-col justify-center">
+          <label class="block text-2xl font-bold mb-6 text-aizome border-b-2 border-haifuji pb-2 inline-block w-max">
+            設定班級人數
           </label>
           <input
             type="number"
             id="student-count-input"
             min="1"
             max="100"
-            class="w-full text-xl p-2 border-2 border-navy rounded-md focus:outline-none focus:ring-2 focus:ring-teal bg-alice disabled:opacity-50 transition-opacity"
+            class="w-full text-4xl p-4 border-b-4 border-aizome rounded-none focus:outline-none focus:border-asagi bg-transparent disabled:opacity-50 transition-colors text-center font-bold"
           />
         </div>
 
-        <!-- Timer Display -->
-        <div class="bg-white border-2 border-navy p-6 flex flex-col items-center justify-center rounded-lg shadow-sm relative overflow-hidden">
-          <div class="absolute top-0 w-full h-2 bg-navy"></div>
+        <!-- Timer Display (Top Right) -->
+        <div class="bg-white border-4 border-aizome p-8 flex flex-col items-center justify-center rounded-lg shadow-md relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-3 bg-aizome"></div>
           
-          <div class="text-6xl font-mono font-black text-navy tracking-wider my-2 drop-shadow-sm flex items-center gap-3">
-            <i data-lucide="timer" class="text-teal w-10 h-10"></i>
+          <div class="text-7xl md:text-8xl font-sans font-black text-aizome tracking-widest my-4 drop-shadow-sm flex items-center gap-4">
+            <i data-lucide="timer" class="text-asagi w-14 h-14"></i>
             <span id="timer-display">00:00</span>
           </div>
 
-          <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-4 mt-4 z-10">
+          <div class="flex flex-col w-full gap-4 mt-6 z-10">
             <button
               id="toggle-timer-btn"
-              class="w-full sm:w-64 py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md bg-navy text-white border-navy hover:bg-[#2A4080]"
+              class="w-full py-5 rounded-sm text-3xl font-bold border-2 transition-all shadow-md bg-aizome text-white border-aizome hover:bg-[#11243f] tracking-widest"
             >
               計時開始
             </button>
-
-            <button
-              id="save-db-btn"
-              class="w-full sm:w-64 py-3 rounded-full text-lg font-bold bg-blue-500 text-white border-2 border-blue-600 hover:bg-blue-600 shadow-md flex items-center justify-center gap-2 hidden"
-            >
-              <i data-lucide="save" class="w-6 h-6"></i>
-              儲存成績
-            </button>
+            
+            <!-- Action Buttons: Save & Query -->
+            <div class="flex flex-col sm:flex-row gap-4 w-full">
+              <button
+                id="save-db-btn"
+                class="flex-1 py-4 rounded-sm text-xl font-bold bg-white text-aizome border-2 border-aizome hover:bg-haifuji shadow-sm flex items-center justify-center gap-2 hidden transition-colors"
+              >
+                <i data-lucide="save" class="w-6 h-6"></i> 儲存成績
+              </button>
+              <button
+                id="query-history-btn"
+                class="flex-1 py-4 rounded-sm text-xl font-bold bg-asagi text-white border-2 border-asagi hover:bg-[#00708a] shadow-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <i data-lucide="database" class="w-6 h-6"></i> 查詢歷史
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Seat Buttons -->
-        <div class="bg-white p-6 rounded-lg border border-steel shadow-sm flex flex-col">
-          <h2 class="text-lg font-bold mb-4 text-navy">點擊座號記錄成績：</h2>
-          <div id="seat-container" class="flex flex-wrap gap-3 justify-center overflow-y-auto p-2">
-            <!-- Seat buttons injected via JS -->
-          </div>
+      <!-- Seat Buttons (Below Top Section) -->
+      <div class="bg-shironeri p-8 rounded-lg border-2 border-haifuji shadow-inner">
+        <div class="flex items-center gap-3 mb-8 border-b-2 border-haifuji pb-3">
+          <i data-lucide="users" class="w-8 h-8 text-aizome"></i>
+          <h2 class="text-3xl font-bold text-aizome tracking-wider">點擊座號記錄成績</h2>
         </div>
-
+        
+        <!-- 大按鈕容器 -->
+        <div id="seat-container" class="flex flex-wrap gap-5 md:gap-6 justify-center p-4">
+          <!-- Seat buttons injected via JS -->
+        </div>
       </div>
 
       <!-- Bottom Section: Results Table -->
-      <div class="bg-white border border-steel rounded-lg shadow-sm overflow-hidden w-full flex flex-col">
-        <div class="bg-navy text-white py-3 px-4 font-bold text-lg flex justify-between items-center border-b-2 border-teal">
-          <span>英雄榜（成績紀錄）</span>
-          <button id="delete-all-btn" class="hidden text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 flex items-center gap-1 border border-red-700 transition-colors">
-            <i data-lucide="trash-2" class="w-3 h-3"></i> 清空所有歷史
-          </button>
+      <div class="bg-white border-2 border-haifuji rounded-lg shadow-sm overflow-hidden w-full flex flex-col">
+        <div class="bg-aizome text-kinari py-4 px-6 font-bold text-2xl border-b-4 border-asagi flex justify-between items-center flex-wrap gap-4 tracking-wider">
+          <span id="table-title">英雄榜（本次成績紀錄）</span>
+          <!-- Admin Controls (Visible when querying history) -->
+          <div id="admin-controls" class="hidden flex flex-wrap gap-3 items-center">
+            <span class="text-sm text-haifuji mr-2 border-r border-haifuji pr-4">總管模式開啟</span>
+            <button id="change-pwd-btn" class="text-sm bg-transparent text-white px-4 py-2 border border-white hover:bg-white hover:text-aizome transition-colors font-bold">修改密碼</button>
+            <button id="delete-all-btn" class="text-sm bg-kurenai text-white px-4 py-2 hover:bg-[#A31637] flex items-center gap-2 transition-colors font-bold shadow-md">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> 清空所有歷史
+            </button>
+            <button id="exit-history-btn" class="text-sm bg-haifuji text-aizome font-bold px-4 py-2 hover:bg-white transition-colors shadow-md">退出查詢</button>
+          </div>
         </div>
-        <div class="overflow-x-auto p-2">
+        
+        <div class="overflow-x-auto p-4">
           <table class="w-full text-center border-collapse" id="records-table">
             <thead>
-              <tr class="bg-[#E6F0FA] text-navy border-b-2 border-navy" id="table-header-row">
-                <th class="p-3 border border-steel">座號</th>
-                <th class="p-3 border border-steel text-teal">本次紀錄</th>
-                <!-- History columns injected via JS -->
+              <tr class="bg-kinari text-aizome border-b-4 border-aizome" id="table-header-row">
+                <th class="p-4 border-2 border-haifuji w-1/2 text-2xl tracking-widest">座號</th>
+                <th class="p-4 border-2 border-haifuji text-asagi w-1/2 text-2xl tracking-widest">本次紀錄</th>
               </tr>
             </thead>
             <tbody id="table-body">
               <!-- Rows injected via JS -->
-              <tr><td colspan="3" class="p-8 text-gray-500 italic">正在載入資料...</td></tr>
             </tbody>
           </table>
         </div>
@@ -160,46 +188,15 @@
   </div>
 
   <!-- Bottom Floating Controls -->
-  <div class="fixed bottom-6 right-6 flex flex-col gap-4 z-40">
+  <div class="fixed bottom-8 right-8 flex flex-col gap-4 z-40">
     <button
       id="reset-btn"
-      class="w-16 h-16 bg-teal text-white rounded-full flex flex-col items-center justify-center shadow-[0_4px_15px_rgba(0,163,175,0.4)] hover:bg-teal-dark hover:scale-110 transition-transform border-2 border-white"
+      class="w-20 h-20 bg-asagi text-white rounded-full flex flex-col items-center justify-center shadow-[0_8px_20px_rgba(0,137,167,0.4)] hover:bg-[#00708a] hover:scale-110 transition-transform border-4 border-white group"
       title="重置畫面"
     >
-      <i data-lucide="rotate-ccw" class="w-7 h-7"></i>
-      <span class="text-xs font-bold mt-1">重置</span>
+      <i data-lucide="rotate-ccw" class="w-8 h-8 group-hover:-rotate-90 transition-transform duration-300"></i>
+      <span class="text-sm font-bold mt-1 tracking-widest">重置</span>
     </button>
-  </div>
-
-  <!-- Admin Panel (Bottom Left) -->
-  <div class="fixed bottom-6 left-6 z-40 flex items-end">
-    
-    <div id="admin-active-panel" class="hidden bg-navy text-white px-4 py-2 rounded-lg shadow-lg border border-teal flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
-      <i data-lucide="unlock" class="w-4 h-4"></i>
-      <span class="font-bold text-sm">總管模式</span>
-      <button id="change-pwd-btn" class="ml-3 text-teal hover:text-white underline text-xs font-bold">修改密碼</button>
-      <button id="logout-admin-btn" class="ml-3 text-steel hover:text-white underline text-xs">退出</button>
-    </div>
-    
-    <div id="admin-login-panel" class="group relative flex items-center">
-      <button class="w-10 h-10 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity hover:bg-gray-300">
-        <i data-lucide="lock" class="w-4 h-4"></i>
-      </button>
-      <div class="absolute left-12 bottom-0 hidden group-hover:flex bg-white p-2 rounded shadow-lg border border-steel gap-2 w-48">
-        <input 
-          type="password" 
-          id="admin-password"
-          placeholder="總管密碼..." 
-          class="w-full text-sm p-1 border border-gray-300 rounded focus:outline-none focus:border-teal"
-        />
-        <button 
-          id="login-admin-btn"
-          class="bg-navy text-white px-2 py-1 text-sm rounded hover:bg-[#2A4080] whitespace-nowrap transition-colors"
-        >
-          解鎖
-        </button>
-      </div>
-    </div>
   </div>
 
   <!-- Application Logic -->
@@ -234,11 +231,11 @@
       studentCount: parseInt(localStorage.getItem('studentCount') || '25'),
       time: 0,
       isRunning: false,
-      sessionRecords: {}, // { "1": "01:23", "2": "01:45" }
-      dbRecords: [], // Array of DB items
+      sessionRecords: {}, 
+      dbRecords: [], 
       isAdmin: false,
-      timerInterval: null,
-      adminPassword: localStorage.getItem('adminPwd') || 'admin888'
+      adminPassword: localStorage.getItem('adminPwd') || 'admin888',
+      timerInterval: null
     };
 
     // --- DOM Elements ---
@@ -247,17 +244,16 @@
       timerDisplay: document.getElementById('timer-display'),
       toggleTimerBtn: document.getElementById('toggle-timer-btn'),
       saveDbBtn: document.getElementById('save-db-btn'),
+      queryHistoryBtn: document.getElementById('query-history-btn'),
       seatContainer: document.getElementById('seat-container'),
+      tableTitle: document.getElementById('table-title'),
+      adminControls: document.getElementById('admin-controls'),
       tableHeaderRow: document.getElementById('table-header-row'),
       tableBody: document.getElementById('table-body'),
       deleteAllBtn: document.getElementById('delete-all-btn'),
-      resetBtn: document.getElementById('reset-btn'),
-      adminActivePanel: document.getElementById('admin-active-panel'),
-      adminLoginPanel: document.getElementById('admin-login-panel'),
-      adminPassword: document.getElementById('admin-password'),
-      loginAdminBtn: document.getElementById('login-admin-btn'),
-      logoutAdminBtn: document.getElementById('logout-admin-btn'),
       changePwdBtn: document.getElementById('change-pwd-btn'),
+      exitHistoryBtn: document.getElementById('exit-history-btn'),
+      resetBtn: document.getElementById('reset-btn'),
       toast: document.getElementById('toast'),
       toastMessage: document.getElementById('toast-message')
     };
@@ -272,10 +268,8 @@
     const showToast = (msg) => {
       UI.toastMessage.innerText = msg;
       UI.toast.classList.remove('hidden');
-      
-      void UI.toast.offsetWidth; // Trigger reflow
+      void UI.toast.offsetWidth;
       UI.toast.classList.remove('opacity-0');
-      
       setTimeout(() => {
         UI.toast.classList.add('opacity-0');
         setTimeout(() => UI.toast.classList.add('hidden'), 300);
@@ -285,7 +279,6 @@
     // --- Auth & DB Initialization ---
     const initAuth = async () => {
       if (!hasFirebase) {
-        // Fallback to local storage mode
         setupDbListener();
         return;
       }
@@ -303,30 +296,23 @@
     if (hasFirebase) {
       onAuthStateChanged(auth, (currentUser) => {
         state.user = currentUser;
-        if (currentUser) {
-          setupDbListener();
-        }
+        if (currentUser) setupDbListener();
       });
     }
 
-    // --- Database Listener ---
     const setupDbListener = () => {
       if (hasFirebase && state.user) {
         const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'runnerRecords');
         onSnapshot(recordsRef, (snapshot) => {
           state.dbRecords = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+            id: doc.id, ...doc.data()
           })).sort((a, b) => a.seatNumber - b.seatNumber);
-          renderTable();
+          if (state.isAdmin) renderTable();
         }, (error) => console.error("Error fetching records:", error));
       } else if (!hasFirebase) {
-        // Load from LocalStorage
         const localData = localStorage.getItem('ironman_records');
-        if (localData) {
-          state.dbRecords = JSON.parse(localData);
-        }
-        renderTable();
+        if (localData) state.dbRecords = JSON.parse(localData);
+        if (state.isAdmin) renderTable();
       }
     };
 
@@ -337,14 +323,14 @@
         const isRecorded = !!state.sessionRecords[i];
         const btn = document.createElement('button');
         btn.innerText = i;
-        btn.className = `w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shadow-sm seat-btn border-2 
+        // 日式大按鈕設計
+        btn.className = `w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-3xl sm:text-4xl font-black shadow-md seat-btn border-4 
           ${isRecorded 
-            ? 'bg-[#E5E5E5] text-[#A9A9A9] border-[#A9A9A9] cursor-not-allowed scale-95' 
-            : 'bg-navy text-white border-teal hover:bg-[#2A4080] cursor-pointer'
+            ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed scale-95 opacity-80' 
+            : 'bg-white text-aizome border-aizome cursor-pointer hover:bg-aizome hover:text-white'
           }
-          ${!state.isRunning && !isRecorded ? 'opacity-70' : 'opacity-100'}
+          ${!state.isRunning && !isRecorded ? 'opacity-60 grayscale-[50%]' : 'opacity-100'}
         `;
-        
         btn.disabled = isRecorded || !state.isRunning;
         btn.onclick = () => handleRecordTime(i);
         UI.seatContainer.appendChild(btn);
@@ -352,30 +338,28 @@
     };
 
     const renderTable = () => {
-      // 收集所有出現過的紀錄時間 (作為欄位名稱)
       const allDates = new Set();
       state.dbRecords.forEach(r => {
         if (r.history) r.history.forEach(h => allDates.add(h.date));
       });
-      // 按字串時間排序 (YYYY/MM/DD HH:mm 格式)
       const sortedDates = Array.from(allDates).sort();
 
-      // Render Headers
       let headerHTML = `
-        <th class="p-3 border border-steel w-20">座號</th>
-        <th class="p-3 border border-steel text-teal w-32">本次紀錄</th>
+        <th class="p-4 border-2 border-haifuji w-24 text-2xl tracking-widest">座號</th>
+        <th class="p-4 border-2 border-haifuji text-asagi w-40 text-2xl tracking-widest">本次紀錄</th>
       `;
       
-      // 只有管理員能看見歷史紀錄欄位
       if (state.isAdmin) {
         sortedDates.forEach(date => {
-          headerHTML += `<th class="p-3 border border-steel whitespace-nowrap text-sm font-normal text-gray-700">${date}</th>`;
+          headerHTML += `<th class="p-4 border-2 border-haifuji whitespace-nowrap text-lg font-bold text-gray-700">${date}</th>`;
         });
-        headerHTML += `<th class="p-3 border border-steel w-20">管理</th>`;
+        headerHTML += `<th class="p-4 border-2 border-haifuji w-24 text-xl tracking-widest">管理</th>`;
+        UI.tableTitle.innerText = "英雄榜（所有歷史紀錄）";
+      } else {
+        UI.tableTitle.innerText = "英雄榜（本次成績紀錄）";
       }
+      
       UI.tableHeaderRow.innerHTML = headerHTML;
-
-      // Render Body
       UI.tableBody.innerHTML = '';
       let hasAnyData = false;
 
@@ -384,28 +368,26 @@
         const hasSessionRecord = !!state.sessionRecords[seat];
         const hasDbRecord = dbRecord && dbRecord.history && dbRecord.history.length > 0;
 
-        // 【規則】未登入總管：僅顯示當下「本次紀錄」有資料的人。登入總管：顯示有「本次」或「歷史」紀錄的人。
         if (!state.isAdmin && !hasSessionRecord) continue;
         if (state.isAdmin && !hasSessionRecord && !hasDbRecord) continue;
 
         hasAnyData = true;
         const tr = document.createElement('tr');
-        tr.className = "border-b border-steel hover:bg-alice transition-colors";
+        tr.className = "border-b-2 border-haifuji hover:bg-shironeri transition-colors";
         
         let rowHTML = `
-          <td class="p-3 font-bold text-lg border border-steel bg-bglight">${seat}</td>
-          <td class="p-3 border border-steel font-mono text-teal font-bold text-lg">${state.sessionRecords[seat] || '-'}</td>
+          <td class="p-5 font-black text-3xl border-2 border-haifuji bg-kinari text-aizome">${seat}</td>
+          <td class="p-5 border-2 border-haifuji font-sans font-bold text-asagi text-2xl tracking-wider">${state.sessionRecords[seat] || '-'}</td>
         `;
 
         if (state.isAdmin) {
           sortedDates.forEach(date => {
             const h = dbRecord ? (dbRecord.history || []).find(x => x.date === date) : null;
-            rowHTML += `<td class="p-3 border border-steel font-mono text-gray-600">${h ? h.time : '-'}</td>`;
+            rowHTML += `<td class="p-5 border-2 border-haifuji font-sans text-gray-700 text-xl tracking-wider">${h ? h.time : '-'}</td>`;
           });
-
-          rowHTML += `<td class="p-3 border border-steel">`;
+          rowHTML += `<td class="p-4 border-2 border-haifuji">`;
           if (hasDbRecord) {
-            rowHTML += `<button data-id="${dbRecord.id}" data-seat="${seat}" class="delete-record-btn text-red-500 hover:text-red-700 p-1 bg-red-50 rounded transition-colors" title="刪除此座號歷史"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            rowHTML += `<button data-id="${dbRecord.id}" data-seat="${seat}" class="delete-record-btn text-kurenai hover:text-white hover:bg-kurenai p-3 border-2 border-kurenai rounded-sm transition-colors shadow-sm" title="刪除此座號歷史"><i data-lucide="trash-2" class="w-6 h-6"></i></button>`;
           }
           rowHTML += `</td>`;
         }
@@ -416,11 +398,10 @@
 
       if (!hasAnyData) {
         const colSpan = state.isAdmin ? (sortedDates.length + 3) : 2;
-        const emptyMsg = state.isAdmin ? "尚無成績紀錄，請開始計時！" : "尚無本次紀錄，請計時後點擊座號儲存。";
-        UI.tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-gray-500 italic">${emptyMsg}</td></tr>`;
+        const emptyMsg = state.isAdmin ? "尚無成績紀錄，請開始計時並儲存！" : "尚無本次紀錄，請計時後點擊座號儲存。";
+        UI.tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="p-12 text-gray-400 italic text-2xl tracking-widest">${emptyMsg}</td></tr>`;
       }
 
-      // Attach event listeners to delete buttons
       document.querySelectorAll('.delete-record-btn').forEach(btn => {
         btn.onclick = () => handleDeleteRecord(btn.getAttribute('data-id'), parseInt(btn.getAttribute('data-seat')));
       });
@@ -430,32 +411,35 @@
     };
 
     const updateVisibility = () => {
+      // Timer Button State (Red for STOP, Navy for START)
       if (state.isRunning) {
         UI.toggleTimerBtn.innerText = '計時結束';
-        UI.toggleTimerBtn.className = "w-full py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md bg-teal text-white border-teal hover:bg-teal-dark";
-        UI.saveDbBtn.classList.add('hidden');
+        UI.toggleTimerBtn.className = "w-full py-5 rounded-sm text-3xl font-bold border-2 transition-all shadow-md bg-kurenai text-white border-kurenai hover:bg-[#A31637] tracking-widest";
       } else {
         UI.toggleTimerBtn.innerText = '計時開始';
-        UI.toggleTimerBtn.className = "w-full py-3 rounded-full text-xl font-bold border-2 transition-colors shadow-md bg-navy text-white border-navy hover:bg-[#2A4080]";
-        
-        if (Object.keys(state.sessionRecords).length > 0) {
-          UI.saveDbBtn.classList.remove('hidden');
-        } else {
-          UI.saveDbBtn.classList.add('hidden');
-        }
+        UI.toggleTimerBtn.className = "w-full py-5 rounded-sm text-3xl font-bold border-2 transition-all shadow-md bg-aizome text-white border-aizome hover:bg-[#11243f] tracking-widest";
       }
 
       const hasRecords = Object.keys(state.sessionRecords).length > 0;
       UI.studentCountInput.disabled = state.isRunning || hasRecords;
 
-      if (state.isAdmin) {
-        UI.adminActivePanel.classList.remove('hidden');
-        UI.adminLoginPanel.classList.add('hidden');
-        UI.deleteAllBtn.classList.remove('hidden');
+      if (!state.isRunning && hasRecords) {
+        UI.saveDbBtn.classList.remove('hidden');
       } else {
-        UI.adminActivePanel.classList.add('hidden');
-        UI.adminLoginPanel.classList.remove('hidden');
-        UI.deleteAllBtn.classList.add('hidden');
+        UI.saveDbBtn.classList.add('hidden');
+      }
+
+      if (state.isRunning) {
+        UI.queryHistoryBtn.classList.add('hidden');
+      } else {
+        UI.queryHistoryBtn.classList.remove('hidden');
+      }
+
+      if (state.isAdmin) {
+        UI.adminControls.classList.remove('hidden');
+        UI.queryHistoryBtn.classList.add('hidden');
+      } else {
+        UI.adminControls.classList.add('hidden');
       }
     };
 
@@ -466,15 +450,14 @@
         clearInterval(state.timerInterval);
       } else {
         state.isRunning = true;
-        if (state.time === 0) {
-          state.sessionRecords = {};
-        }
+        if (state.time === 0) state.sessionRecords = {};
         state.timerInterval = setInterval(() => {
           state.time += 1;
           UI.timerDisplay.innerText = formatTime(state.time);
         }, 1000);
       }
       renderSeats();
+      renderTable();
       updateVisibility();
     };
 
@@ -493,22 +476,17 @@
 
     const handleSaveToDB = async () => {
       const recordsToSave = Object.entries(state.sessionRecords);
-      if (recordsToSave.length === 0) {
-        showToast("本次無新紀錄可儲存！");
-        return;
-      }
+      if (recordsToSave.length === 0) return;
 
       UI.saveDbBtn.innerHTML = `<i data-lucide="loader" class="w-6 h-6 animate-spin"></i> 儲存中...`;
       if (typeof lucide !== 'undefined') lucide.createIcons();
       UI.saveDbBtn.disabled = true;
 
-      // 產生格式化的紀錄時間 (YYYY/MM/DD HH:mm)
       const now = new Date();
       const saveTime = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
       try {
         if (hasFirebase && state.user) {
-          // Cloud Storage
           for (const [seatStr, timeStr] of recordsToSave) {
             const seat = parseInt(seatStr);
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'runnerRecords', `seat_${seat}`);
@@ -516,24 +494,19 @@
 
             if (docSnap.exists()) {
               const data = docSnap.data();
-              // 兼容舊資料轉換為帶時間戳的新格式
-              const history = data.history || (data.times ? data.times.map((t, i) => ({ date: `舊紀錄 ${i+1}`, time: t })) : []);
+              const history = data.history || [];
               await updateDoc(docRef, { history: [...history, { date: saveTime, time: timeStr }] });
             } else {
               await setDoc(docRef, { seatNumber: seat, history: [{ date: saveTime, time: timeStr }] });
             }
           }
-          showToast("成績已儲存至雲端資料庫！");
         } else {
-          // Local Storage Fallback
           for (const [seatStr, timeStr] of recordsToSave) {
             const seat = parseInt(seatStr);
             let existingRecord = state.dbRecords.find(r => r.seatNumber === seat);
             
             if (existingRecord) {
-              if (!existingRecord.history) {
-                 existingRecord.history = (existingRecord.times || []).map((t, i) => ({ date: `舊紀錄 ${i+1}`, time: t }));
-              }
+              if (!existingRecord.history) existingRecord.history = [];
               existingRecord.history.push({ date: saveTime, time: timeStr });
             } else {
               state.dbRecords.push({ id: `seat_${seat}`, seatNumber: seat, history: [{ date: saveTime, time: timeStr }] });
@@ -541,17 +514,16 @@
           }
           state.dbRecords.sort((a, b) => a.seatNumber - b.seatNumber);
           localStorage.setItem('ironman_records', JSON.stringify(state.dbRecords));
-          showToast("成績已儲存至瀏覽器！");
         }
 
-        // Reset session
         state.sessionRecords = {};
         state.time = 0;
         UI.timerDisplay.innerText = "00:00";
+        showToast("成績已成功儲存！");
         renderSeats();
         renderTable();
       } catch (error) {
-        console.error("Error saving records:", error);
+        console.error("Error saving:", error);
         showToast("儲存失敗，請重試。");
       } finally {
         UI.saveDbBtn.innerHTML = `<i data-lucide="save" class="w-6 h-6"></i> 儲存成績`;
@@ -561,27 +533,13 @@
       }
     };
 
-    const handleReset = () => {
-      state.isRunning = false;
-      clearInterval(state.timerInterval);
-      state.time = 0;
-      state.sessionRecords = {};
-      UI.timerDisplay.innerText = "00:00";
-      renderSeats();
-      renderTable();
-      updateVisibility();
-      showToast("畫面資料已重置。");
-    };
-
-    // --- Admin Handlers ---
-    const handleAdminLogin = () => {
-      if (UI.adminPassword.value === state.adminPassword) {
+    const handleQueryHistory = () => {
+      const pwd = prompt("請輸入總管密碼以查詢歷史紀錄：");
+      if (pwd === state.adminPassword) {
         state.isAdmin = true;
-        UI.adminPassword.value = '';
         renderTable();
-        updateVisibility();
-        showToast("已進入總管模式。");
-      } else {
+        showToast("已進入歷史查詢模式。");
+      } else if (pwd !== null) {
         showToast("密碼錯誤！");
       }
     };
@@ -603,7 +561,7 @@
         }
         showToast("所有歷史紀錄已徹底清除！");
       } catch (error) {
-        console.error("Error deleting all records:", error);
+        console.error("Error deleting:", error);
         showToast("清除失敗。");
       }
     };
@@ -623,9 +581,21 @@
         }
         showToast(`座號 ${seatNumber} 的紀錄已刪除。`);
       } catch (error) {
-        console.error("Error deleting record:", error);
+        console.error("Error deleting:", error);
         showToast("刪除失敗。");
       }
+    };
+
+    const handleReset = () => {
+      state.isRunning = false;
+      clearInterval(state.timerInterval);
+      state.time = 0;
+      state.sessionRecords = {};
+      UI.timerDisplay.innerText = "00:00";
+      renderSeats();
+      renderTable();
+      updateVisibility();
+      showToast("畫面資料已重置。");
     };
 
     // --- Event Listeners Binding ---
@@ -640,13 +610,16 @@
 
     UI.toggleTimerBtn.addEventListener('click', handleToggleTimer);
     UI.saveDbBtn.addEventListener('click', handleSaveToDB);
+    UI.queryHistoryBtn.addEventListener('click', handleQueryHistory);
     UI.resetBtn.addEventListener('click', handleReset);
-    UI.loginAdminBtn.addEventListener('click', handleAdminLogin);
-    UI.adminPassword.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleAdminLogin();
-    });
+    UI.deleteAllBtn.addEventListener('click', handleDeleteAllRecords);
     
-    // 修改密碼綁定
+    UI.exitHistoryBtn.addEventListener('click', () => {
+      state.isAdmin = false;
+      renderTable();
+      showToast("已退出歷史查詢。");
+    });
+
     UI.changePwdBtn.addEventListener('click', () => {
       const newPwd = prompt('請輸入新的總管密碼：');
       if (newPwd && newPwd.trim() !== '') {
@@ -655,14 +628,6 @@
         showToast('密碼已成功修改！');
       }
     });
-
-    UI.logoutAdminBtn.addEventListener('click', () => {
-      state.isAdmin = false;
-      renderTable();
-      updateVisibility();
-      showToast("已退出總管模式。");
-    });
-    UI.deleteAllBtn.addEventListener('click', handleDeleteAllRecords);
 
     // --- Initialization ---
     if (typeof lucide !== 'undefined') lucide.createIcons();
